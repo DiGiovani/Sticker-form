@@ -1,48 +1,27 @@
+import axios, { AxiosResponse } from 'axios';
 import { FormEvent, useState } from 'react';
-import { api } from '../services/api';
 import styles from '../styles/components/form.module.css';
 
 export default function Form() {
-  const [ name, setName ] = useState<string>()
-  const [ email, setEmail ] = useState<string>()
-  const [ phone, setPhone ] = useState<string>()
-  const [ addressZip, setAddressZip ] = useState<string>()
-  const [ addressStreet, setAddressStreet ] = useState<string>()
-  const [ addressNumber, setAddressNumber ] = useState<string>()
-  const [ addressComplement, setAddressComplement ] = useState<string>()
-  const [ addressDistrict, setAddressDistrict ] = useState<string>()
-  const [ addressCity, setAddressCity ] = useState<string>()
-  const [ addressState, setAddressState ] = useState<string>()
+  const [ name, setName ] = useState<string>('')
+  const [ email, setEmail ] = useState<string>('')
+  const [ phone, setPhone ] = useState<string>('')
+  const [ addressZip, setAddressZip ] = useState<string>('')
+  const [ addressStreet, setAddressStreet ] = useState<string>('')
+  const [ addressNumber, setAddressNumber ] = useState<string>('')
+  const [ addressComplement, setAddressComplement ] = useState<string>('')
+  const [ addressDistrict, setAddressDistrict ] = useState<string>('')
+  const [ addressCity, setAddressCity ] = useState<string>('')
+  const [ addressState, setAddressState ] = useState<string>('')
 
   const [ formState, setFormState ] = useState<string>('incomplete')
 
+
   async function handleForm(event: FormEvent) {
     event.preventDefault();
+    setFormState('loading')
 
-    // const data = {
-    //   name: name,
-    //   email: email,
-    //   phone: phone,
-    //   addressZip: addressZip,
-    //   addressStreet: addressStreet,
-    //   addressNumber: addressNumber,
-    //   addressDistrict: addressComplement, 
-    //   addressCity: addressCity, 
-    //   addressState: addressDistrict,
-    // }
-
-    // data.name = name
-    // data.email = email
-    // data.phone = phone
-    // data.addressZip = addressZip
-    // data.addressStreet = addressStreet
-    // data.addressNumber = addressNumber
-    // // data.addressComplement = addressComplement 
-    // data.addressCity = addressCity  
-    // data.addressDistrict = addressDistrict
-    // data.addressState = addressState
-
-    let data = new FormData();
+    const data = new FormData();
 
     data.append('name', name);
     data.append('email', email);
@@ -55,19 +34,38 @@ export default function Form() {
     data.append('addressDistrict', addressDistrict);
     data.append('addressState', addressState);
 
-    // if(data) {
-    //   console.log(data.values);
-    // }
-    console.log(data)
-    await api.post('submit', data).catch(error => {
-      console.log(error)
-    }).then(res => {
-      console.log(res)
+    const regex = /\D/g;
+
+    const cep = addressZip.replace(regex, "")
+    const telNumber = phone.replace(regex, "")
+
+
+    axios({
+      method: 'post',
+      url: 'https://simple-api-selection.herokuapp.com/submit',
+      data: {
+        "name": `${name}`,
+        "email": `${email}`,
+        "phone": `${telNumber}`,
+        "addressZip": `${cep}`,
+        "addressStreet": `${addressStreet}`,
+        "addressNumber": `${addressNumber}`,
+        "addressComplement": `${addressComplement}`,
+        "addressDistrict": `${addressDistrict}`,
+        "addressCity": `${addressCity}`,
+        "addressState": `${addressState}`,
+      }
+    }).catch(err => {
+      console.log(err)
+      setFormState('failed')
+    }).then((res: AxiosResponse) => {
+      if(res.status == 200) {
+        setFormState('success')
+      }
+  
     })
-
-
-
-    // console.log(response);
+  
+    
 
   }
 
@@ -103,10 +101,18 @@ export default function Form() {
 
             <div className={styles.inputBlock}>
               <label htmlFor="phone">Telefone</label>
-              <input 
+              <input
                 id="phone"
                 value={phone}
+                onKeyUp= {e => {
+                  e.currentTarget.maxLength = 15;
+                  let value = e.currentTarget.value;
+                  value = value.replace(/\D/g, '')
+                  value = value.replace(/(\d{2})(\d{5})(\d)/, "($1) $2-$3")
+                  e.currentTarget.value = value;
+                }}
                 onChange= { e => setPhone(e.target.value)}
+                placeholder="(99) 99999-9999"
                 required
               />
             </div>
@@ -118,7 +124,17 @@ export default function Form() {
               <input 
                 id="addressZip"
                 value={addressZip}
-                onChange= { e => setAddressZip(e.target.value)}
+                onKeyUp = { e => {
+                  e.currentTarget.maxLength = 15;
+                  let value = e.currentTarget.value;
+                  value = value.replace(/\D/g, '')
+                  value = value.replace(/(\d{5})(\d)/, "$1-$2")
+                  e.currentTarget.value = value;
+
+                  
+                }}
+                onChange={ e => setAddressZip(e.target.value)}
+                placeholder="99999-999"
                 required
               />
             </div>
@@ -200,6 +216,10 @@ export default function Form() {
 
       <div style={formState == 'failed' ? {} : {display: 'none'}} className={styles.loadingContainer}>
         <h1>Seu formulário não foi enviado, <a href='/'>recarregue a página</a> para tentar novamente.</h1>
+      </div>
+
+      <div style={formState == 'success' ? {} : {display: 'none'}} className={styles.loadingContainer}>
+        <h1>Muito bom! Você receberá seus adesivos em alguns dias.</h1>
       </div>
 
 
